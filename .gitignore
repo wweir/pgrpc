@@ -20,4 +20,5 @@
 
 _example/pgrpc_client
 _example/pgrpc_server
+_example/_example
 go.sum
