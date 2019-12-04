@@ -10,3 +10,14 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+.DS_Store
+._*
+*.swp
+*.swo
+.vscode
+.idea
+
+_example/pgrpc_client
+_example/pgrpc_server
+go.sum
