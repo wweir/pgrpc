@@ -42,7 +42,7 @@ func NewClient(addr string, opts ...ClientOpt) (*Client, error) {
 		for {
 			conn, err := ln.Accept()
 			if err != nil {
-				c.Log("tcp fail: %s", err)
+				c.Log("tcp listen fail: %s", err)
 				continue
 			}
 
@@ -50,6 +50,7 @@ func NewClient(addr string, opts ...ClientOpt) (*Client, error) {
 				for _, fn := range c.onAccept {
 					if conn, err = fn(conn); err != nil {
 						c.Log("run tcp accept hook fail: %s", err)
+						conn.Close()
 						return
 					}
 				}

@@ -51,12 +51,8 @@ func client() {
 
 	var oneID string
 	{ // test each all server
-		pgrpc.Each(func(id string, cc *grpc.ClientConn, err error) error {
+		pgrpc.Each(func(id string, cc *grpc.ClientConn) error {
 			oneID = id
-			if err != nil {
-				log.Println(err)
-				return err
-			}
 
 			resp, err := NewPingClient(cc).Ping(context.Background(), &PingMsg{
 				Msg: "pgrpc_each",

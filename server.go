@@ -60,12 +60,11 @@ func Listen(address, id string, opts ...ServerOpt) (net.Listener, error) {
 	DIAL_LOOP:
 		for {
 			conn, err := net.Dial("tcp", address)
-			for _, fn := range ln.onAccept {
-				if conn, err = fn(conn); err != nil {
-					ln.Log("run tcp accept hook fail: %s", err)
-					return
-				}
+			if err != nil {
+				ln.Log("tcp dial %s fail: %s", address, err)
+				continue
 			}
+
 			for _, fn := range ln.onAccept {
 				if conn, err = fn(conn); err != nil {
 					ln.Log("tcp on accept hook fail: %s", err)
