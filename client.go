@@ -80,12 +80,12 @@ func NewClient(addr string, opts ...ClientOpt) (*Client, error) {
 }
 
 // Dial build a new connection from the global client
-func Dial(key string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+func Dial(key string) (*grpc.ClientConn, error) {
 	return defaultClient.Dial(key)
 }
 
 // Dial build a new connection
-func (c *Client) Dial(key string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+func (c *Client) Dial(key string) (*grpc.ClientConn, error) {
 	val, ok := c.Load(key)
 	if !ok {
 		return nil, errors.Errorf("connection point to %s not found", key)
@@ -95,10 +95,10 @@ func (c *Client) Dial(key string, opts ...grpc.DialOption) (*grpc.ClientConn, er
 	return cc, errors.Wrap(err, "pgrpc dial")
 }
 
-func Each(fn func(id string, cc *grpc.ClientConn, err error) error) {
+func Each(fn func(id string, cc *grpc.ClientConn) error) {
 	defaultClient.Each(fn)
 }
-func (c *Client) Each(fn func(id string, cc *grpc.ClientConn, err error) error) {
+func (c *Client) Each(fn func(id string, cc *grpc.ClientConn) error) {
 	wg := sync.WaitGroup{}
 	defer wg.Wait()
 
@@ -108,7 +108,14 @@ func (c *Client) Each(fn func(id string, cc *grpc.ClientConn, err error) error) 
 			defer wg.Done()
 
 			cc, err := pool.Get()
-			err = fn(id, cc, err)
+			if err != nil {
+				c.Log("pgrpc dial %s fail: %s", key, err)
+				return
+			}
+
+			if err = fn(id, cc); err != nil {
+				c.Log("pgrpc do each func for %s fail: %s", key, err)
+			}
 			pool.PutCC(cc, err)
 
 		}(key.(string), val.(*pool))
