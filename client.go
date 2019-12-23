@@ -171,9 +171,15 @@ func (s *pool) Get() (cc *grpc.ClientConn, err error) {
 		s.mu.Unlock()
 
 		// dial client conn
+		ctx := context.Background()
+		if s.dialTimeout != 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, s.dialTimeout)
+			defer cancel()
+		}
 		opts := append(s.grpcDialOpts, grpc.WithContextDialer(
 			func(context.Context, string) (net.Conn, error) { return conn, nil }))
-		cc, err := grpc.DialContext(context.Background(), conn.RemoteAddr().String(), opts...)
+		cc, err := grpc.DialContext(ctx, conn.RemoteAddr().String(), opts...)
 		if err != nil {
 			s.Log("grpc dail fail: %s", err)
 			conn.Close()
