@@ -133,8 +133,8 @@ func (a *activeConn) Read(b []byte) (n int, err error) {
 		return a.Conn.Read(b)
 
 	default:
-		// wait 1min and redial, avoid aws load balancer 1m close policy
-		a.Conn.SetDeadline(time.Now().Add(time.Minute))
+		// redial after 30s
+		a.Conn.SetDeadline(time.Now().Add(30 * time.Second))
 		if n, err = a.Conn.Read(b); err != nil {
 			return n, errors.Errorf("tcp on accept hook fail: %s", err)
 		}
