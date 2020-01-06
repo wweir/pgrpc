@@ -64,15 +64,3 @@ func (o *proxyProtocol) applyClient(co *clientOpts) {
 func (o *proxyProtocol) RemoteAddr() net.Addr {
 	return o.remoteAddr
 }
-
-type dialTimeout struct {
-	time.Duration
-}
-
-// WithDialTimeout set proxy protocol support
-func WithDialTimeout(timeout time.Duration) ClientOpt {
-	return &dialTimeout{Duration: timeout}
-}
-func (o *dialTimeout) applyClient(co *clientOpts) {
-	co.dialTimeout = o.Duration
-}

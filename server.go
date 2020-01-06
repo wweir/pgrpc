@@ -103,12 +103,6 @@ type activeConn struct {
 }
 
 func newActiveConn(ln *listener, conn net.Conn, id string) (*activeConn, error) {
-	if c, ok := conn.(*net.TCPConn); ok {
-		c.SetLinger(1)
-		c.SetKeepAlive(true)
-		c.SetKeepAlivePeriod(5 * time.Second)
-	}
-
 	aConn := activeConn{listener: ln, Conn: conn, init: make(chan struct{})}
 
 	// write id
@@ -129,31 +123,32 @@ func newActiveConn(ln *listener, conn net.Conn, id string) (*activeConn, error) 
 }
 
 var tlsHandshark = []byte{0x16, 0x03, 0x01} // h2 tls handshake TLS 1.0
-var h2cHeader = []byte("PRISM")             // h2c [P]RISM
+var h2cHandshark = []byte("PRISM")          // h2c [P]RISM
 
 func (a *activeConn) Read(b []byte) (n int, err error) {
 	select {
 	case <-a.init:
 		return a.Conn.Read(b)
-
 	default:
-		// redial after 30s
-		a.Conn.SetDeadline(time.Now().Add(30 * time.Second))
-		if n, err = a.Conn.Read(b); err != nil {
-			return n, errors.Errorf("tcp on accept hook fail: %s", err)
-		}
-		a.Conn.SetDeadline(time.Time{})
-
-		// detect handshake
-		if bytes.HasPrefix(b, tlsHandshark) || bytes.HasPrefix(b, h2cHeader) {
-			a.once.Do(func() {
-				close(a.init)
-			})
-		}
-
-		return
 	}
+
+	// redial after 30s
+	a.Conn.SetDeadline(time.Now().Add(30 * time.Second))
+	if n, err = a.Conn.Read(b); err != nil {
+		return n, errors.Errorf("tcp on accept hook fail: %s", err)
+	}
+	a.Conn.SetDeadline(time.Time{})
+
+	// detect handshake
+	if bytes.HasPrefix(b, tlsHandshark) || bytes.HasPrefix(b, h2cHandshark) {
+		a.once.Do(func() {
+			close(a.init)
+		})
+	}
+
+	return n, err
 }
+
 func (a *activeConn) Close() error {
 	a.once.Do(func() {
 		close(a.init)

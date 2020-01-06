@@ -2,7 +2,7 @@ package pgrpc
 
 import (
 	"bytes"
-	context "context"
+	"context"
 	"io"
 	"net"
 	"sync"
@@ -61,13 +61,18 @@ func NewClient(addr string, opts ...ClientOpt) (*Client, error) {
 					buf := make([]byte, MAX_ID_LEN)
 					conn.SetDeadline(time.Now().Add(5 * time.Second))
 					if _, err := io.ReadFull(conn, buf); err != nil {
-						c.Log("read connection fail: %s", err)
+						c.Log("read connection fail: %s, readed: %s", err, buf)
 						conn.Close()
 						return
 					}
 
 					conn.SetDeadline(time.Time{})
 					id = string(bytes.TrimRight(buf, string(0)))
+				}
+
+				if c, ok := conn.(*net.TCPConn); ok {
+					c.SetKeepAlive(true)
+					c.SetKeepAlivePeriod(5 * time.Second)
 				}
 
 				// cache connection
@@ -171,15 +176,9 @@ func (s *pool) Get() (cc *grpc.ClientConn, err error) {
 		s.mu.Unlock()
 
 		// dial client conn
-		ctx := context.Background()
-		if s.dialTimeout != 0 {
-			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(ctx, s.dialTimeout)
-			defer cancel()
-		}
 		opts := append(s.grpcDialOpts, grpc.WithContextDialer(
 			func(context.Context, string) (net.Conn, error) { return conn, nil }))
-		cc, err := grpc.DialContext(ctx, conn.RemoteAddr().String(), opts...)
+		cc, err := grpc.DialContext(context.Background(), conn.RemoteAddr().String(), opts...)
 		if err != nil {
 			s.Log("grpc dail fail: %s", err)
 			conn.Close()
