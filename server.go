@@ -1,6 +1,7 @@
 package pgrpc
 
 import (
+	"bytes"
 	"net"
 	"sync"
 	"time"
@@ -127,6 +128,9 @@ func newActiveConn(ln *listener, conn net.Conn, id string) (*activeConn, error) 
 	return &aConn, nil
 }
 
+var tlsHandshark = []byte{0x16, 0x03, 0x01} // h2 tls handshake TLS 1.0
+var h2cHeader = []byte("PRISM")             // h2c [P]RISM
+
 func (a *activeConn) Read(b []byte) (n int, err error) {
 	select {
 	case <-a.init:
@@ -141,7 +145,7 @@ func (a *activeConn) Read(b []byte) (n int, err error) {
 		a.Conn.SetDeadline(time.Time{})
 
 		// detect handshake
-		if n != 0 && (b[0] == 22 /* h2 tls handshake */ || b[0] == 50 /* h2c [P]RISM */) {
+		if bytes.HasPrefix(b, tlsHandshark) || bytes.HasPrefix(b, h2cHeader) {
 			a.once.Do(func() {
 				close(a.init)
 			})
