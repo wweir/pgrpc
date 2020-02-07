@@ -153,7 +153,7 @@ type pool struct {
 }
 
 func (s *pool) Get() (cc *grpc.ClientConn, err error) {
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 20; /* 6s > 5s */ i++ {
 		s.mu.Lock()
 		if len(s.ccs) != 0 {
 			cc = s.ccs[0]
@@ -167,7 +167,7 @@ func (s *pool) Get() (cc *grpc.ClientConn, err error) {
 		// no avaiable ClientConn, try build from net.Conn
 		if len(s.conns) == 0 {
 			s.mu.Unlock()
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(300 * time.Millisecond)
 			continue
 		}
 
